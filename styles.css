@@ -1,14 +1,14 @@
-/* Structural Metadata plugin styles */
+/* Structural Properties plugin styles */
 
-.structural-metadata-subsection {
+.structural-properties-subsection {
 	margin-left: 1em;
 }
 
-.structural-metadata-muted {
+.structural-properties-muted {
 	color: var(--text-muted);
 }
 
-.structural-metadata-safety-note {
+.structural-properties-safety-note {
 	padding: 0.75em 1em;
 	margin: 1em 0;
 	border-left: 3px solid var(--text-warning, #d4a017);
@@ -16,32 +16,32 @@
 	border-radius: 4px;
 }
 
-.structural-metadata-test-result {
+.structural-properties-test-result {
 	margin: 0.5em 0 1em;
 }
 
-.structural-metadata-actions {
+.structural-properties-actions {
 	margin-top: 1em;
 }
 
-.structural-metadata-dryrun-summary {
+.structural-properties-dryrun-summary {
 	color: var(--text-muted);
 }
 
-.structural-metadata-table-wrap {
+.structural-properties-table-wrap {
 	overflow-x: auto;
 	max-height: 60vh;
 	overflow-y: auto;
 }
 
-.structural-metadata-dryrun-table {
+.structural-properties-dryrun-table {
 	width: 100%;
 	border-collapse: collapse;
 	font-size: var(--font-ui-smaller);
 }
 
-.structural-metadata-dryrun-table th,
-.structural-metadata-dryrun-table td {
+.structural-properties-dryrun-table th,
+.structural-properties-dryrun-table td {
 	border: 1px solid var(--background-modifier-border);
 	padding: 0.3em 0.5em;
 	text-align: left;
@@ -49,21 +49,20 @@
 	word-break: break-word;
 }
 
-.structural-metadata-dryrun-table thead th {
+.structural-properties-dryrun-table thead th {
 	position: sticky;
 	top: 0;
 	background: var(--background-secondary);
 }
 
-.structural-metadata-action-set {
+.structural-properties-action-set {
 	color: var(--text-accent);
 }
 
-.structural-metadata-action-clear {
+.structural-properties-action-clear {
 	color: var(--text-warning, #d4a017);
 }
 
-.structural-metadata-action-skip {
+.structural-properties-action-skip {
 	color: var(--text-muted);
 }
-

@@ -1,4 +1,4 @@
-# Structural Metadata
+# Structural Properties
 
 An [Obsidian](https://obsidian.md) plugin that derives frontmatter properties
 declaratively from file paths, folder hierarchy and folder notes. Instead of
@@ -24,11 +24,11 @@ and provides dry-run and refresh commands so you stay in control of every write.
 
 ### Write policies
 
-| Policy | Behaviour |
-| --- | --- |
+| Policy              | Behaviour                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `managed` (default) | Writes when the property is empty or still holds the value the plugin last set. Manual edits are detected as user overrides and left alone. |
-| `always` | Always overwrites when the value differs. |
-| `empty-only` | Only writes when the property is missing or empty. |
+| `always`            | Always overwrites when the value differs.                                                                                                   |
+| `empty-only`        | Only writes when the property is missing or empty.                                                                                          |
 
 When a rule no longer matches a file (e.g. it was moved out of scope), the
 `on-no-match` policy decides what happens:
@@ -56,7 +56,7 @@ The plugin is independent of any specific Folder Notes plugin.
 
 ## Commands
 
-All commands appear in the command palette under **Structural Metadata**:
+All commands appear in the command palette under **Structural Properties**:
 
 - **Refresh current file**
 - **Refresh current folder**
@@ -82,21 +82,21 @@ The settings tab provides:
 
 ## Resolvers
 
-| Resolver | Description |
-| --- | --- |
-| `parent-folder-note` | The folder note of the containing folder. |
-| `ancestor-folder-note` | The folder note at a configured level below a root folder. |
-| `nearest-folder-note` | The first folder note found walking up the hierarchy. |
-| `path-segment` | A path segment (current folder name or an index from the root). |
-| `path-regex` | Regex captures applied to the file path, with an output template. |
-| `inherit-property` | A property copied from a folder note (parent or nearest). |
-| `static` | A fixed value. |
+| Resolver               | Description                                                       |
+| ---------------------- | ----------------------------------------------------------------- |
+| `parent-folder-note`   | The folder note of the containing folder.                         |
+| `ancestor-folder-note` | The folder note at a configured level below a root folder.        |
+| `nearest-folder-note`  | The first folder note found walking up the hierarchy.             |
+| `path-segment`         | A path segment (current folder name or an index from the root).   |
+| `path-regex`           | Regex captures applied to the file path, with an output template. |
+| `inherit-property`     | A property copied from a folder note (parent or nearest).         |
+| `static`               | A fixed value.                                                    |
 
 ## Privacy
 
 The plugin is fully local and offline. It reads and writes only frontmatter
 inside your vault, stores its configuration and managed state in
-`.obsidian/plugins/structural-metadata/data.json`, and makes no network requests.
+`.obsidian/plugins/structural-properties/data.json`, and makes no network requests.
 
 ## Development
 
@@ -109,7 +109,7 @@ npm test         # unit tests (Node test runner + jiti)
 ```
 
 Release artifacts are `main.js`, `manifest.json` and `styles.css`. Copy them into
-`<Vault>/.obsidian/plugins/structural-metadata/`, reload Obsidian and enable the
+`<Vault>/.obsidian/plugins/structural-properties/`, reload Obsidian and enable the
 plugin under **Settings → Community plugins**.
 
 > Requires Obsidian 1.4.4+ (`processFrontMatter`).

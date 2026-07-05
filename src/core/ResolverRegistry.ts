@@ -1,9 +1,9 @@
 import type {
-	ResolverConfig,
-	ResolverContext,
-	ResolverFn,
-	ResolverResult,
-	ResolverType,
+  ResolverConfig,
+  ResolverContext,
+  ResolverFn,
+  ResolverResult,
+  ResolverType,
 } from '../types';
 
 /**
@@ -14,32 +14,32 @@ import type {
  * {@link ResolverResult}. They never write to files.
  */
 export class ResolverRegistry {
-	private resolvers = new Map<ResolverType, ResolverFn>();
+  private resolvers = new Map<ResolverType, ResolverFn>();
 
-	register(type: ResolverType, fn: ResolverFn): void {
-		this.resolvers.set(type, fn);
-	}
+  register(type: ResolverType, fn: ResolverFn): void {
+    this.resolvers.set(type, fn);
+  }
 
-	has(type: ResolverType): boolean {
-		return this.resolvers.has(type);
-	}
+  has(type: ResolverType): boolean {
+    return this.resolvers.has(type);
+  }
 
-	async resolve(
-		config: ResolverConfig,
-		ctx: ResolverContext,
-	): Promise<ResolverResult> {
-		const fn = this.resolvers.get(config.type);
-		if (!fn) {
-			return { matched: false, resultType: 'raw' };
-		}
-		try {
-			return await fn(config, ctx);
-		} catch (err) {
-			console.error(
-				`[Structural Metadata] Resolver "${config.type}" threw:`,
-				err,
-			);
-			return { matched: false, resultType: 'raw' };
-		}
-	}
+  async resolve(
+    config: ResolverConfig,
+    ctx: ResolverContext,
+  ): Promise<ResolverResult> {
+    const fn = this.resolvers.get(config.type);
+    if (!fn) {
+      return { matched: false, resultType: 'raw' };
+    }
+    try {
+      return await fn(config, ctx);
+    } catch (err) {
+      console.error(
+        `[Structural Properties] Resolver "${config.type}" threw:`,
+        err,
+      );
+      return { matched: false, resultType: 'raw' };
+    }
+  }
 }

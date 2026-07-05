@@ -160,7 +160,7 @@ export class StructuralMetadataSettingsTab extends PluginSettingTab {
 		if (rules.length === 0) {
 			el.createEl('p', {
 				text: 'No rules yet. Add a rule or pick a preset above.',
-				cls: 'structural-metadata-muted',
+				cls: 'structural-properties-muted',
 			});
 			return;
 		}
@@ -211,7 +211,7 @@ export class StructuralMetadataSettingsTab extends PluginSettingTab {
 	private renderTestPath(el: HTMLElement): void {
 		new Setting(el).setName('Test path').setHeading();
 
-		const resultEl = el.createDiv({ cls: 'structural-metadata-test-result' });
+		const resultEl = el.createDiv({ cls: 'structural-properties-test-result' });
 		let currentPath = '';
 
 		new Setting(el)
@@ -247,7 +247,7 @@ export class StructuralMetadataSettingsTab extends PluginSettingTab {
 			el.createEl('p', { text: 'No rules matched this path.' });
 			return;
 		}
-		const table = el.createEl('table', { cls: 'structural-metadata-dryrun-table' });
+		const table = el.createEl('table', { cls: 'structural-properties-dryrun-table' });
 		const thead = table.createEl('thead').createEl('tr');
 		for (const h of ['Property', 'Old', 'New', 'Action', 'Conflict', 'Reason']) {
 			thead.createEl('th', { text: h });
@@ -282,7 +282,7 @@ export class StructuralMetadataSettingsTab extends PluginSettingTab {
 	}
 
 	private renderSafetyNote(el: HTMLElement): void {
-		const note = el.createDiv({ cls: 'structural-metadata-safety-note' });
+		const note = el.createDiv({ cls: 'structural-properties-safety-note' });
 		note.createEl('strong', { text: 'Safety: ' });
 		note.appendText(
 			'Vault-wide writes only happen through the refresh commands. Run a dry run first and review the planned changes before applying to the entire vault.',

@@ -1,10 +1,10 @@
 {
-	"id": "structural-metadata",
-	"name": "Structural Metadata",
-	"version": "1.0.0",
-	"minAppVersion": "1.4.4",
-	"description": "Derive frontmatter properties from file paths, folder hierarchy and folder notes.",
-	"author": "j3sch",
-	"authorUrl": "https://github.com/j3sch",
-	"isDesktopOnly": false
+  "id": "structural-properties",
+  "name": "Structural Properties",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.4",
+  "description": "Derive frontmatter properties from file paths, folder hierarchy and folder notes.",
+  "author": "j3sch",
+  "authorUrl": "https://github.com/j3sch",
+  "isDesktopOnly": false
 }
