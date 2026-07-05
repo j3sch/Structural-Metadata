@@ -1,8 +1,69 @@
-/*
+/* Structural Metadata plugin styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.structural-metadata-subsection {
+	margin-left: 1em;
+}
 
-If your plugin does not need CSS, delete this file.
+.structural-metadata-muted {
+	color: var(--text-muted);
+}
 
-*/
+.structural-metadata-safety-note {
+	padding: 0.75em 1em;
+	margin: 1em 0;
+	border-left: 3px solid var(--text-warning, #d4a017);
+	background: var(--background-secondary);
+	border-radius: 4px;
+}
+
+.structural-metadata-test-result {
+	margin: 0.5em 0 1em;
+}
+
+.structural-metadata-actions {
+	margin-top: 1em;
+}
+
+.structural-metadata-dryrun-summary {
+	color: var(--text-muted);
+}
+
+.structural-metadata-table-wrap {
+	overflow-x: auto;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.structural-metadata-dryrun-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--font-ui-smaller);
+}
+
+.structural-metadata-dryrun-table th,
+.structural-metadata-dryrun-table td {
+	border: 1px solid var(--background-modifier-border);
+	padding: 0.3em 0.5em;
+	text-align: left;
+	vertical-align: top;
+	word-break: break-word;
+}
+
+.structural-metadata-dryrun-table thead th {
+	position: sticky;
+	top: 0;
+	background: var(--background-secondary);
+}
+
+.structural-metadata-action-set {
+	color: var(--text-accent);
+}
+
+.structural-metadata-action-clear {
+	color: var(--text-warning, #d4a017);
+}
+
+.structural-metadata-action-skip {
+	color: var(--text-muted);
+}
+

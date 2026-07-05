@@ -1,114 +1,203 @@
+import { MarkdownView, Notice, Plugin, TFile } from 'obsidian';
+import type { ProcessorResult } from './types';
+import { mergeSettings } from './settings';
+import { ManagedStateStore } from './state/ManagedStateStore';
+import { DiffEngine } from './core/DiffEngine';
+import { Formatter } from './core/Formatter';
+import { RuleEngine } from './core/RuleEngine';
+import { createDefaultRegistry } from './resolvers';
+import { ObsidianLinkGenerator } from './obsidian/LinkGeneratorImpl';
+import { ObsidianVaultAccess } from './obsidian/VaultAccess';
+import { FrontmatterWriter } from './obsidian/FrontmatterWriter';
+import { MetadataProcessor } from './obsidian/MetadataProcessor';
 import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
-	Modal,
-	Notice,
-	Plugin,
-} from 'obsidian';
-import {
-	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
-} from './settings';
+	EventController,
+	type EventControllerHost,
+} from './obsidian/EventController';
+import { StructuralMetadataSettingsTab } from './ui/SettingsTab';
+import { DryRunModal } from './ui/DryRunModal';
+import { registerCommands } from './commands';
 
-// Remember to rename these classes and interfaces!
+export default class StructuralMetadataPlugin extends Plugin {
+	settings!: ReturnType<typeof mergeSettings>;
+	managedState!: ManagedStateStore;
+	vaultAccess!: ObsidianVaultAccess;
+	linkGenerator!: ObsidianLinkGenerator;
+	processor!: MetadataProcessor;
+	private eventController!: EventController;
 
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
-
-	async onload() {
+	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
+		this.vaultAccess = new ObsidianVaultAccess(this.app);
+		this.linkGenerator = new ObsidianLinkGenerator(this.app);
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		const registry = createDefaultRegistry();
+		const formatter = new Formatter(this.linkGenerator);
+		const diffEngine = new DiffEngine();
+		const engine = new RuleEngine(registry, formatter, diffEngine);
+		const writer = new FrontmatterWriter(this.app);
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			},
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
-			},
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			},
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
+		this.processor = new MetadataProcessor(
+			this.app,
+			engine,
+			writer,
+			this.vaultAccess,
+			this.linkGenerator,
+			() => this.settings,
+			this.managedState,
 		);
+
+		registerCommands(this);
+		this.addSettingTab(new StructuralMetadataSettingsTab(this.app, this));
+
+		this.eventController = new EventController(this, this.makeEventHost());
+		this.eventController.start();
+
+		// Prune managed state for files that no longer exist once the layout is ready.
+		this.app.workspace.onLayoutReady(() => {
+			this.pruneManagedState();
+		});
 	}
 
-	onunload() {}
-
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
-		);
+	onunload(): void {
+		this.eventController?.stop();
 	}
 
-	async saveSettings() {
+	private makeEventHost(): EventControllerHost {
+		return {
+			app: this.app,
+			managedState: this.managedState,
+			getDebounceMs: () => this.settings.defaults.debounceMs,
+			processPaths: (paths) => this.processPaths(paths),
+		};
+	}
+
+	async loadSettings(): Promise<void> {
+		const loaded = (await this.loadData()) as
+			| Partial<ReturnType<typeof mergeSettings>>
+			| null;
+		this.settings = mergeSettings(loaded);
+		this.managedState = new ManagedStateStore(this.settings.managedState);
+	}
+
+	async saveSettings(): Promise<void> {
+		this.settings.managedState = this.managedState.state;
 		await this.saveData(this.settings);
 	}
-}
 
-class SampleModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
+	/** Process (plan + apply) a set of file paths, then persist managed state. */
+	async processPaths(paths: string[]): Promise<ProcessorResult> {
+		const result = await this.processor.processPaths(paths);
+		await this.saveSettings();
+		return result;
 	}
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+	// -------------------------------------------------------------------------
+	// Command implementations
+	// -------------------------------------------------------------------------
+
+	private getActiveFile(): TFile | null {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (view?.file) return view.file;
+		return this.app.workspace.getActiveFile();
+	}
+
+	async refreshCurrentFile(): Promise<void> {
+		const file = this.getActiveFile();
+		if (!file) {
+			new Notice('Structural metadata: no active file');
+			return;
+		}
+		const result = await this.processPaths([file.path]);
+		this.reportResult(result, 'current file');
+	}
+
+	async refreshCurrentFolder(): Promise<void> {
+		const file = this.getActiveFile();
+		if (!file || !file.parent) {
+			new Notice('Structural metadata: no active file to determine a folder');
+			return;
+		}
+		const paths = this.processor.getProcessableFilePathsInFolder(file.parent.path);
+		if (paths.length === 0) {
+			new Notice('Structural metadata: no processable files in this folder');
+			return;
+		}
+		new Notice(`Structural metadata: refreshing ${paths.length} file(s)…`);
+		const result = await this.processPaths(paths);
+		this.reportResult(result, 'folder');
+	}
+
+	async refreshEntireVault(): Promise<void> {
+		const paths = this.processor.getProcessableFilePaths();
+		if (paths.length === 0) {
+			new Notice('Structural metadata: no processable files found');
+			return;
+		}
+		new Notice(`Structural metadata: refreshing ${paths.length} file(s)…`);
+		const result = await this.processPaths(paths);
+		this.reportResult(result, 'vault');
+	}
+
+	async dryRunCurrentFolder(): Promise<void> {
+		const file = this.getActiveFile();
+		if (!file || !file.parent) {
+			new Notice('Structural metadata: no active file to determine a folder');
+			return;
+		}
+		const paths = this.processor.getProcessableFilePathsInFolder(file.parent.path);
+		await this.runDryRun(paths);
+	}
+
+	async dryRunEntireVault(): Promise<void> {
+		const paths = this.processor.getProcessableFilePaths();
+		await this.runDryRun(paths);
+	}
+
+	private async runDryRun(paths: string[]): Promise<void> {
+		if (paths.length === 0) {
+			new Notice('Structural metadata: no processable files found');
+			return;
+		}
+		new Notice(`Structural metadata: planning for ${paths.length} file(s)…`);
+		const changes = await this.processor.planPaths(paths);
+		const actionable = changes.filter(
+			(c) => c.action === 'set' || c.action === 'clear',
+		);
+		const apply = async (): Promise<void> => {
+			const uniquePaths = Array.from(new Set(actionable.map((c) => c.filePath)));
+			const result = await this.processPaths(uniquePaths);
+			this.reportResult(result, 'dry run apply');
+		};
+		new DryRunModal(this.app, changes, apply).open();
+	}
+
+	async cleanManagedState(): Promise<void> {
+		const removed = this.pruneManagedState();
+		await this.saveSettings();
+		new Notice(
+			`Structural metadata: pruned ${removed} stale managed-state entr${removed === 1 ? 'y' : 'ies'}`,
+		);
+	}
+
+	private pruneManagedState(): number {
+		const existing = new Set(this.vaultAccess.getAllMarkdownFilePaths());
+		return this.managedState.prune(existing);
+	}
+
+	private reportResult(result: ProcessorResult, scope: string): void {
+		if (result.errors > 0) {
+			new Notice(
+				`Structural metadata (${scope}): ${result.applied} applied, ${result.errors} error(s)`,
+				6000,
+			);
+		} else if (result.applied === 0) {
+			new Notice(`Structural metadata (${scope}): nothing to change`);
+		} else {
+			new Notice(
+				`Structural metadata (${scope}): ${result.applied} change(s) applied`,
+			);
+		}
 	}
 }

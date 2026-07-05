@@ -1,92 +1,119 @@
-# Obsidian Sample Plugin
+# Structural Metadata
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+An [Obsidian](https://obsidian.md) plugin that derives frontmatter properties
+declaratively from file paths, folder hierarchy and folder notes. Instead of
+hardcoding a vault structure, you configure **rules** such as:
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+> "If a file is in scope `01 Projects/**`, set the `project` property to the
+> ancestor folder note one level below `01 Projects`."
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+The plugin updates notes automatically when they are created, moved or renamed,
+and provides dry-run and refresh commands so you stay in control of every write.
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+## How it works
 
-## First time developing plugins?
+1. **Scope** — A rule's scope decides which files it applies to (include/exclude
+   globs, markdown-only filter, minimum folder depth).
+2. **Resolver** — A resolver derives a value from the file's location, e.g. the
+   parent folder note, an ancestor folder note, a path segment, a regex capture,
+   a property inherited from a folder note, or a static value.
+3. **Format** — The resolved value is turned into a YAML-compatible value
+   (wikilink, text, list, tag, boolean or number).
+4. **Write policy** — The diff engine decides whether to actually write, based on
+   the policy and the plugin's managed-state tracking.
 
-Quick starting guide for new plugin devs:
+### Write policies
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+| Policy | Behaviour |
+| --- | --- |
+| `managed` (default) | Writes when the property is empty or still holds the value the plugin last set. Manual edits are detected as user overrides and left alone. |
+| `always` | Always overwrites when the value differs. |
+| `empty-only` | Only writes when the property is missing or empty. |
 
-## Releasing new releases
+When a rule no longer matches a file (e.g. it was moved out of scope), the
+`on-no-match` policy decides what happens:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- `clear-managed` (default) — removes the property if the plugin still manages it.
+- `ignore` — leaves the value untouched.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### Folder note detection
 
-## Adding your plugin to the community plugin list
+Folder notes are detected via configurable patterns using the placeholders
+`{{folderPath}}` and `{{folderName}}`. Defaults cover the most common conventions:
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+- `{{folderPath}}/{{folderName}}.md` — a note inside the folder with the folder's name.
+- `{{folderPath}}/index.md` — an `index.md` inside the folder.
+- `{{folderPath}}.md` — a note sitting next to the folder with the folder's name.
 
-## How to use
+The plugin is independent of any specific Folder Notes plugin.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### Link format
 
-## Manually installing the plugin
+- `full-path` (default) — wikilinks with the full vault path, e.g.
+  `[[01 Projects/Captzy/Captzy]]`.
+- `obsidian-preference` — uses Obsidian's `generateMarkdownLink`, which respects
+  your app link preferences.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Commands
 
-## Improve code quality with eslint
+All commands appear in the command palette under **Structural Metadata**:
 
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+- **Refresh current file**
+- **Refresh current folder**
+- **Refresh entire vault**
+- **Dry run current folder**
+- **Dry run entire vault**
+- **Clean managed state**
 
-## Funding URL
+Vault-wide writes should be reviewed with a dry run first.
 
-You can include funding URLs where people who use your plugin can financially support it.
+## Settings
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+The settings tab provides:
 
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+- **Defaults** — debounce delay, default write policy, on-no-match, link style,
+  global exclude patterns and folder-note patterns.
+- **Rules** — enable/disable, edit, delete and add rules. Several **presets** are
+  available to get started quickly.
+- **Test path** — enter a sample vault path to preview which rules match and what
+  values would be written.
+- **Managed state** — shows how many files are currently tracked and lets you
+  prune stale entries.
+
+## Resolvers
+
+| Resolver | Description |
+| --- | --- |
+| `parent-folder-note` | The folder note of the containing folder. |
+| `ancestor-folder-note` | The folder note at a configured level below a root folder. |
+| `nearest-folder-note` | The first folder note found walking up the hierarchy. |
+| `path-segment` | A path segment (current folder name or an index from the root). |
+| `path-regex` | Regex captures applied to the file path, with an output template. |
+| `inherit-property` | A property copied from a folder note (parent or nearest). |
+| `static` | A fixed value. |
+
+## Privacy
+
+The plugin is fully local and offline. It reads and writes only frontmatter
+inside your vault, stores its configuration and managed state in
+`.obsidian/plugins/structural-metadata/data.json`, and makes no network requests.
+
+## Development
+
+```bash
+npm install
+npm run dev      # watch build
+npm run build    # production build (type-check + bundle)
+npm run lint     # eslint
+npm test         # unit tests (Node test runner + jiti)
 ```
 
-If you have multiple URLs, you can also do:
+Release artifacts are `main.js`, `manifest.json` and `styles.css`. Copy them into
+`<Vault>/.obsidian/plugins/structural-metadata/`, reload Obsidian and enable the
+plugin under **Settings → Community plugins**.
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
-```
+> Requires Obsidian 1.4.4+ (`processFrontMatter`).
 
-## API Documentation
+## API documentation
 
-See https://docs.obsidian.md
+See <https://docs.obsidian.md>.
