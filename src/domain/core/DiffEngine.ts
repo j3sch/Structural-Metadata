@@ -1,10 +1,7 @@
-import type {
-	DiffInput,
-	ManagedEntry,
-	PlannedChange,
-	ResolverResult,
-} from '../types';
-import { hashValue, isEmptyValue, valuesEqual } from '../utils/hash';
+import type { DiffInput, PlannedChange } from '../changes';
+import type { ManagedEntry } from '../managed-state';
+import type { ResolverResult } from '../resolvers';
+import { hashValue, isEmptyValue, valuesEqual } from '../../utils/hash';
 
 /**
  * Computes the planned action for a single rule/file/property combination,

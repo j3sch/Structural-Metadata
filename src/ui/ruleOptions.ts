@@ -7,7 +7,7 @@ import type {
 	StructuralRule,
 	TextTransform,
 	WritePolicy,
-} from '../types';
+} from '../domain/rules';
 
 export const RESOLVER_TYPES: { value: ResolverType; label: string }[] = [
 	{ value: 'parent-folder-note', label: 'Parent folder note' },

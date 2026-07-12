@@ -1,6 +1,6 @@
-import type { ScopeConfig, StructuralMetadataSettings } from '../types';
-import { compileGlob } from '../utils/glob';
-import { getPathSegments } from '../utils/path';
+import type { ScopeConfig, StructuralMetadataSettings } from '../rules';
+import { compileGlob } from '../../utils/glob';
+import { getPathSegments } from '../../utils/path';
 
 /**
  * Decides whether a given file path falls within a rule's scope.
@@ -55,6 +55,6 @@ export class ScopeMatcher {
 		scope: ScopeConfig,
 		settings: StructuralMetadataSettings,
 	): boolean {
-		return ScopeMatcher.matches(filePath, scope, settings.defaults.excludePatterns);
+		return ScopeMatcher.matches(filePath, scope, settings.excludePatterns);
 	}
 }

@@ -1,5 +1,6 @@
 import { App, ButtonComponent, Modal, Setting } from 'obsidian';
-import type { PlannedChange } from '../types';
+import type { PlannedChange } from '../domain/changes';
+import { renderValue } from './shared/renderValue';
 
 /**
  * Modal that displays planned frontmatter changes in a table and optionally
@@ -111,18 +112,5 @@ export class DryRunModal extends Modal {
 
   onClose(): void {
     this.contentEl.empty();
-  }
-}
-
-function renderValue(value: unknown): string {
-  if (value === undefined) return '—';
-  if (value === null) return 'null';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return '[' + value.map(renderValue).join(', ') + ']';
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return '[unserializable]';
   }
 }

@@ -1,9 +1,6 @@
-import type {
-	FolderNoteSelfBehavior,
-	ResolverContext,
-	ResolverFn,
-} from '../types';
-import { findFolderNote } from '../core/FolderNoteFinder';
+import type { FolderNoteSelfBehavior } from '../domain/rules';
+import type { ResolverContext, ResolverFn } from '../domain/resolvers';
+import { findFolderNote } from '../domain/core/FolderNoteFinder';
 import { getParentFolderPath } from '../utils/path';
 
 /**
@@ -26,7 +23,7 @@ function handleSelf(
 	return findFolderNote(grandparent, ctx.folderNotePatterns, ctx.vault);
 }
 
-export const resolveParentFolderNote: ResolverFn = async (config, ctx) => {
+export const resolveParentFolderNote: ResolverFn<'parent-folder-note'> = async (config, ctx) => {
 	const behavior = config.folderNoteSelfBehavior ?? 'parent-folder-note';
 	const found = findFolderNote(
 		ctx.parentFolderPath,
@@ -40,7 +37,7 @@ export const resolveParentFolderNote: ResolverFn = async (config, ctx) => {
 	return { matched: false, resultType: 'file-ref' };
 };
 
-export const resolveAncestorFolderNote: ResolverFn = async (config, ctx) => {
+export const resolveAncestorFolderNote: ResolverFn<'ancestor-folder-note'> = async (config, ctx) => {
 	const root = config.root ?? '';
 	const level = Math.max(1, config.levelBelowRoot ?? 1);
 	const behavior = config.folderNoteSelfBehavior ?? 'parent-folder-note';
@@ -68,7 +65,7 @@ export const resolveAncestorFolderNote: ResolverFn = async (config, ctx) => {
 	return { matched: false, resultType: 'file-ref' };
 };
 
-export const resolveNearestFolderNote: ResolverFn = async (config, ctx) => {
+export const resolveNearestFolderNote: ResolverFn<'nearest-folder-note'> = async (config, ctx) => {
 	const behavior = config.folderNoteSelfBehavior ?? 'parent-folder-note';
 	let folder = ctx.parentFolderPath;
 	let guard = 0;
@@ -95,7 +92,7 @@ export const resolveNearestFolderNote: ResolverFn = async (config, ctx) => {
 	return { matched: false, resultType: 'file-ref' };
 };
 
-export const resolveInheritProperty: ResolverFn = async (config, ctx) => {
+export const resolveInheritProperty: ResolverFn<'inherit-property'> = async (config, ctx) => {
 	const behavior = config.folderNoteSelfBehavior ?? 'parent-folder-note';
 	const searchMode = config.searchMode ?? 'parent';
 	const prop = config.sourceProperty;

@@ -80,6 +80,9 @@ The settings tab provides:
 - **Managed state** — shows how many files are currently tracked and lets you
   prune stale entries.
 
+Settings use Obsidian's declarative settings API, including global settings
+search, inline validation and mobile-friendly rule and pattern lists.
+
 ## Resolvers
 
 | Resolver               | Description                                                       |
@@ -112,7 +115,10 @@ Release artifacts are `main.js`, `manifest.json` and `styles.css`. Copy them int
 `<Vault>/.obsidian/plugins/structural-properties/`, reload Obsidian and enable the
 plugin under **Settings → Community plugins**.
 
-> Requires Obsidian 1.4.4+ (`processFrontMatter`).
+> Requires Obsidian 1.13.0+ (declarative settings and `processFrontMatter`).
+
+Version 2 uses a new settings schema. Existing version 1 configuration is
+intentionally reset to safe defaults when the plugin first loads.
 
 ## API documentation
 

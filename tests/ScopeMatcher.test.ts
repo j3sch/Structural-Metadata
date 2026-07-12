@@ -1,9 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ScopeMatcher } from '../src/core/ScopeMatcher';
+import { ScopeMatcher } from '../src/domain/core/ScopeMatcher';
 import { defaultSettings } from '../src/settings';
 
-const defaults = defaultSettings().defaults.excludePatterns;
+const defaults = defaultSettings().excludePatterns;
 
 describe('ScopeMatcher', () => {
 	it('respects markdownOnly', () => {

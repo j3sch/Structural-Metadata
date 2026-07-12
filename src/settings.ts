@@ -1,19 +1,26 @@
-import type { StructuralMetadataSettings } from './types';
+import type {
+	FormatConfig,
+	LinkStyle,
+	ManagedState,
+	OnNoMatch,
+	ResolverConfig,
+	StructuralMetadataSettings,
+	StructuralRule,
+	WritePolicy,
+} from './types';
 
-/**
- * Default settings. Kept as a function so every caller gets a fresh deep copy
- * (settings are mutable and persisted to data.json).
- */
+const WRITE_POLICIES = new Set<WritePolicy>(['always', 'empty-only', 'managed']);
+const NO_MATCH_POLICIES = new Set<OnNoMatch>(['ignore', 'clear-managed']);
+const LINK_STYLES = new Set<LinkStyle>(['full-path', 'obsidian-preference']);
+
 export function defaultSettings(): StructuralMetadataSettings {
 	return {
-		schemaVersion: 1,
-		defaults: {
-			debounceMs: 750,
-			writePolicy: 'managed',
-			onNoMatch: 'clear-managed',
-			linkStyle: 'full-path',
-			excludePatterns: ['templater/**', 'templates/**', '**/*.excalidraw.md'],
-		},
+		schemaVersion: 2,
+		debounceMs: 750,
+		writePolicy: 'managed',
+		onNoMatch: 'clear-managed',
+		linkStyle: 'full-path',
+		excludePatterns: ['templater/**', 'templates/**', '**/*.excalidraw.md'],
 		folderNotePatterns: [
 			'{{folderPath}}/{{folderName}}.md',
 			'{{folderPath}}/index.md',
@@ -24,28 +31,201 @@ export function defaultSettings(): StructuralMetadataSettings {
 	};
 }
 
-/**
- * Merge settings loaded from data.json over the defaults.
- *
- * Arrays (rules, folderNotePatterns) are replaced wholesale because merging
- * them element-wise would be ambiguous. `managedState` is preserved as loaded.
- */
-export function mergeSettings(
-	loaded: Partial<StructuralMetadataSettings> | null | undefined,
-): StructuralMetadataSettings {
-	const d = defaultSettings();
-	if (!loaded) return d;
+/** Parse persisted v2 data. Older schemas intentionally restart from defaults. */
+export function mergeSettings(loaded: unknown): StructuralMetadataSettings {
+	const defaults = defaultSettings();
+	if (!isRecord(loaded) || loaded.schemaVersion !== 2) return defaults;
+
 	return {
-		schemaVersion: 1,
-		defaults: { ...d.defaults, ...(loaded.defaults ?? {}) },
-		folderNotePatterns: loaded.folderNotePatterns ?? d.folderNotePatterns,
-		rules: Array.isArray(loaded.rules) ? loaded.rules : d.rules,
-		managedState: loaded.managedState ?? { entries: {} },
+		schemaVersion: 2,
+		debounceMs: validDebounce(loaded.debounceMs) ? loaded.debounceMs : defaults.debounceMs,
+		writePolicy: isWritePolicy(loaded.writePolicy) ? loaded.writePolicy : defaults.writePolicy,
+		onNoMatch: isOnNoMatch(loaded.onNoMatch) ? loaded.onNoMatch : defaults.onNoMatch,
+		linkStyle: isLinkStyle(loaded.linkStyle) ? loaded.linkStyle : defaults.linkStyle,
+		excludePatterns: stringArray(loaded.excludePatterns) ?? defaults.excludePatterns,
+		folderNotePatterns: stringArray(loaded.folderNotePatterns) ?? defaults.folderNotePatterns,
+		rules: Array.isArray(loaded.rules)
+			? loaded.rules.filter(isStructuralRule)
+			: defaults.rules,
+		managedState: isManagedState(loaded.managedState)
+			? loaded.managedState
+			: defaults.managedState,
 	};
 }
 
-/** Generate a reasonably unique rule id. */
+export function validateDebounce(value: number): string | void {
+	if (!validDebounce(value)) return 'Enter a number greater than or equal to 0.';
+}
+
+export function validateRule(rule: StructuralRule): string[] {
+	const errors: string[] = [];
+	if (rule.name.trim() === '') errors.push('Rule name is required.');
+	if (rule.property.trim() === '') errors.push('Property is required.');
+	if (!Number.isFinite(rule.priority)) errors.push('Priority must be a number.');
+	if (rule.resolver.type === 'ancestor-folder-note' && rule.resolver.root.trim() === '') {
+		errors.push('Ancestor resolver root is required.');
+	}
+	if (rule.resolver.type === 'path-regex') {
+		if (rule.resolver.pattern.trim() === '') {
+			errors.push('Regex pattern is required.');
+		} else {
+			try {
+				new RegExp(rule.resolver.pattern);
+			} catch {
+				errors.push('Regex pattern is invalid.');
+			}
+		}
+	}
+	if (
+		rule.resolver.type === 'inherit-property' &&
+		rule.resolver.sourceProperty.trim() === ''
+	) {
+		errors.push('Source property is required.');
+	}
+	return errors;
+}
+
 export function generateRuleId(): string {
 	return `rule-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function isStructuralRule(value: unknown): value is StructuralRule {
+	if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') {
+		return false;
+	}
+	if (
+		typeof value.enabled !== 'boolean' ||
+		typeof value.priority !== 'number' ||
+		typeof value.property !== 'string' ||
+		!isScope(value.scope) ||
+		!isResolver(value.resolver) ||
+		!isFormat(value.format)
+	) {
+		return false;
+	}
+	if (value.writePolicy !== undefined && !isWritePolicy(value.writePolicy)) return false;
+	if (value.onNoMatch !== undefined && !isOnNoMatch(value.onNoMatch)) return false;
+	return validateRule(value as unknown as StructuralRule).length === 0;
+}
+
+function isScope(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		stringArray(value.include) !== null &&
+		stringArray(value.exclude) !== null &&
+		typeof value.markdownOnly === 'boolean' &&
+		(value.minDepthBelowRoot === undefined ||
+			(typeof value.minDepthBelowRoot === 'number' &&
+				Number.isFinite(value.minDepthBelowRoot) &&
+				value.minDepthBelowRoot >= 0))
+	);
+}
+
+function isResolver(value: unknown): value is ResolverConfig {
+	if (!isRecord(value) || typeof value.type !== 'string') return false;
+	if (!isSelfBehavior(value.folderNoteSelfBehavior)) return false;
+	switch (value.type) {
+		case 'parent-folder-note':
+		case 'nearest-folder-note':
+			return true;
+		case 'ancestor-folder-note':
+			return (
+				typeof value.root === 'string' &&
+				typeof value.levelBelowRoot === 'number' &&
+				Number.isFinite(value.levelBelowRoot) &&
+				value.levelBelowRoot >= 1
+			);
+		case 'path-segment':
+			return value.segmentSource === 'from-root' || value.segmentSource === 'current-folder';
+		case 'path-regex':
+			return typeof value.pattern === 'string';
+		case 'inherit-property':
+			return (
+				typeof value.sourceProperty === 'string' &&
+				(value.searchMode === 'parent' || value.searchMode === 'nearest')
+			);
+		case 'static':
+			return 'value' in value;
+		default:
+			return false;
+	}
+}
+
+function isFormat(value: unknown): value is FormatConfig {
+	if (!isRecord(value) || typeof value.type !== 'string') return false;
+	if (!isTransform(value.transform)) return false;
+	switch (value.type) {
+		case 'wikilink':
+			return (
+				(value.style === undefined || isLinkStyle(value.style)) &&
+				(value.alias === undefined || typeof value.alias === 'string')
+			);
+		case 'text':
+		case 'list':
+			return value.delimiter === undefined || typeof value.delimiter === 'string';
+		case 'tag':
+		case 'boolean':
+		case 'number':
+			return true;
+		default:
+			return false;
+	}
+}
+
+function isManagedState(value: unknown): value is ManagedState {
+	if (!isRecord(value) || !isRecord(value.entries)) return false;
+	return Object.values(value.entries).every((fileEntry) => {
+		if (!isRecord(fileEntry)) return false;
+		return Object.entries(fileEntry).every(
+			([property, entry]) =>
+				isRecord(entry) &&
+				entry.property === property &&
+				typeof entry.ruleId === 'string' &&
+				typeof entry.valueHash === 'string',
+		);
+	});
+}
+
+function isWritePolicy(value: unknown): value is WritePolicy {
+	return typeof value === 'string' && WRITE_POLICIES.has(value as WritePolicy);
+}
+
+function isOnNoMatch(value: unknown): value is OnNoMatch {
+	return typeof value === 'string' && NO_MATCH_POLICIES.has(value as OnNoMatch);
+}
+
+function isLinkStyle(value: unknown): value is LinkStyle {
+	return typeof value === 'string' && LINK_STYLES.has(value as LinkStyle);
+}
+
+function isSelfBehavior(value: unknown): boolean {
+	return (
+		value === undefined ||
+		value === 'parent-folder-note' ||
+		value === 'self' ||
+		value === 'none'
+	);
+}
+
+function isTransform(value: unknown): boolean {
+	return (
+		value === undefined ||
+		value === 'none' ||
+		value === 'lowercase' ||
+		value === 'uppercase'
+	);
+}
+
+function validDebounce(value: unknown): value is number {
+	return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+function stringArray(value: unknown): string[] | null {
+	return Array.isArray(value) && value.every((item) => typeof item === 'string')
+		? value
+		: null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}

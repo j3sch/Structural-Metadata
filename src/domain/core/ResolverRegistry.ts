@@ -1,10 +1,10 @@
-import type {
-  ResolverConfig,
-  ResolverContext,
-  ResolverFn,
-  ResolverResult,
-  ResolverType,
-} from '../types';
+import type { ResolverConfig, ResolverType } from '../rules';
+import type { ResolverContext, ResolverFn, ResolverResult } from '../resolvers';
+
+type ErasedResolverFn = (
+  config: ResolverConfig,
+  ctx: ResolverContext,
+) => Promise<ResolverResult>;
 
 /**
  * Registry of resolver implementations keyed by resolver type.
@@ -14,10 +14,10 @@ import type {
  * {@link ResolverResult}. They never write to files.
  */
 export class ResolverRegistry {
-  private resolvers = new Map<ResolverType, ResolverFn>();
+  private resolvers = new Map<ResolverType, ErasedResolverFn>();
 
-  register(type: ResolverType, fn: ResolverFn): void {
-    this.resolvers.set(type, fn);
+  register<T extends ResolverType>(type: T, fn: ResolverFn<T>): void {
+    this.resolvers.set(type, fn as unknown as ErasedResolverFn);
   }
 
   has(type: ResolverType): boolean {

@@ -1,45 +1,43 @@
-import type StructuralMetadataPlugin from '../main';
+import type { Plugin } from 'obsidian';
 
-/**
- * Register all plugin commands so they appear in the command palette.
- *
- * Implementations delegate to the plugin, which orchestrates the processor,
- * managed state and UI modals.
- */
-export function registerCommands(plugin: StructuralMetadataPlugin): void {
+export interface CommandActions {
+	refreshCurrentFile(): Promise<void>;
+	refreshCurrentFolder(): Promise<void>;
+	refreshEntireVault(): Promise<void>;
+	dryRunCurrentFolder(): Promise<void>;
+	dryRunEntireVault(): Promise<void>;
+	cleanManagedState(): Promise<void>;
+}
+
+export function registerCommands(plugin: Plugin, actions: CommandActions): void {
 	plugin.addCommand({
 		id: 'refresh-current-file',
 		name: 'Refresh current file',
-		editorCallback: () => plugin.refreshCurrentFile(),
+		editorCallback: () => actions.refreshCurrentFile(),
 	});
-
 	plugin.addCommand({
 		id: 'refresh-current-folder',
 		name: 'Refresh current folder',
-		editorCallback: () => plugin.refreshCurrentFolder(),
+		editorCallback: () => actions.refreshCurrentFolder(),
 	});
-
 	plugin.addCommand({
 		id: 'refresh-entire-vault',
 		name: 'Refresh entire vault',
-		callback: () => plugin.refreshEntireVault(),
+		callback: () => actions.refreshEntireVault(),
 	});
-
 	plugin.addCommand({
 		id: 'dry-run-current-folder',
 		name: 'Dry run current folder',
-		editorCallback: () => plugin.dryRunCurrentFolder(),
+		editorCallback: () => actions.dryRunCurrentFolder(),
 	});
-
 	plugin.addCommand({
 		id: 'dry-run-entire-vault',
 		name: 'Dry run entire vault',
-		callback: () => plugin.dryRunEntireVault(),
+		callback: () => actions.dryRunEntireVault(),
 	});
-
 	plugin.addCommand({
 		id: 'clean-managed-state',
 		name: 'Clean managed state',
-		callback: () => plugin.cleanManagedState(),
+		callback: () => actions.cleanManagedState(),
 	});
 }

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { Formatter } from '../src/core/Formatter';
+import { Formatter } from '../src/domain/core/Formatter';
 import type { ResolverContext, ResolverResult } from '../src/types';
 import { MockVault, mockLinkGenerator } from './mocks';
 

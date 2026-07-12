@@ -1,4 +1,4 @@
-import type { StructuralRule } from './types';
+import type { StructuralRule } from './domain/rules';
 import { generateRuleId } from './settings';
 
 export interface RulePreset {

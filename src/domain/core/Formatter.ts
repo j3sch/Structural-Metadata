@@ -1,11 +1,7 @@
-import type {
-	FormatConfig,
-	LinkGenerator,
-	ResolverContext,
-	ResolverResult,
-	TextTransform,
-} from '../types';
-import { getFileName } from '../utils/path';
+import type { FormatConfig, TextTransform } from '../rules';
+import type { ResolverContext, ResolverResult } from '../resolvers';
+import type { LinkGenerator } from '../../ports/LinkGenerator';
+import { getFileName } from '../../utils/path';
 
 function applyTransform(value: string, transform: TextTransform | undefined): string {
 	if (transform === 'lowercase') return value.toLowerCase();
@@ -104,20 +100,27 @@ export class Formatter {
 
 		if (result.resultType === 'inherited') {
 			let val = result.inheritedValue;
-			if (typeof val === 'string' && fmt.transform && fmt.transform !== 'none') {
+			if (
+				typeof val === 'string' &&
+				'transform' in fmt &&
+				fmt.transform &&
+				fmt.transform !== 'none'
+			) {
 				val = applyTransform(val, fmt.transform);
 			}
 			return val;
 		}
 
-		// raw
-		return this.coerceRaw(result.rawValue, fmt);
+		if (result.resultType === 'raw') {
+			return this.coerceRaw(result.rawValue, fmt);
+		}
+		return undefined;
 	}
 
 	private formatFileLink(
 		targetPath: string,
 		ctx: ResolverContext,
-		fmt: FormatConfig,
+		fmt: Extract<FormatConfig, { type: 'wikilink' }>,
 	): string {
 		const style = fmt.style ?? 'full-path';
 		if (style === 'obsidian-preference') {

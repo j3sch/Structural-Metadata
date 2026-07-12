@@ -1,5 +1,5 @@
-import type { VaultAccess } from '../types';
-import { getBaseName } from '../utils/path';
+import type { VaultAccess } from '../../ports/VaultAccess';
+import { getBaseName } from '../../utils/path';
 
 /**
  * Expand a folder-note pattern template for a given folder path.

@@ -1,8 +1,4 @@
-import type {
-	ManagedEntry,
-	ManagedFileEntry,
-	ManagedState,
-} from '../types';
+import type { ManagedEntry, ManagedFileEntry, ManagedState } from './managed-state';
 
 /**
  * In-memory store of which property values the plugin last wrote, keyed by

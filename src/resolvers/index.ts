@@ -1,5 +1,4 @@
-import type { ResolverFn, ResolverType } from '../types';
-import { ResolverRegistry } from '../core/ResolverRegistry';
+import { ResolverRegistry } from '../domain/core/ResolverRegistry';
 import {
 	resolveAncestorFolderNote,
 	resolveInheritProperty,
@@ -12,21 +11,15 @@ import {
 	resolveStatic,
 } from './valueResolvers';
 
-const allResolvers: Record<ResolverType, ResolverFn> = {
-	'parent-folder-note': resolveParentFolderNote,
-	'ancestor-folder-note': resolveAncestorFolderNote,
-	'nearest-folder-note': resolveNearestFolderNote,
-	'path-segment': resolvePathSegment,
-	'path-regex': resolvePathRegex,
-	'inherit-property': resolveInheritProperty,
-	static: resolveStatic,
-};
-
 /** Register all built-in resolvers onto a registry. */
 export function registerResolvers(registry: ResolverRegistry): void {
-	for (const [type, fn] of Object.entries(allResolvers)) {
-		registry.register(type as ResolverType, fn);
-	}
+	registry.register('parent-folder-note', resolveParentFolderNote);
+	registry.register('ancestor-folder-note', resolveAncestorFolderNote);
+	registry.register('nearest-folder-note', resolveNearestFolderNote);
+	registry.register('path-segment', resolvePathSegment);
+	registry.register('path-regex', resolvePathRegex);
+	registry.register('inherit-property', resolveInheritProperty);
+	registry.register('static', resolveStatic);
 }
 
 /** Build a registry pre-populated with all built-in resolvers. */

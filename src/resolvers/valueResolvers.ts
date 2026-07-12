@@ -1,7 +1,7 @@
-import type { ResolverFn } from '../types';
+import type { ResolverFn } from '../domain/resolvers';
 import { getBaseName, getPathSegments } from '../utils/path';
 
-export const resolvePathSegment: ResolverFn = async (config, ctx) => {
+export const resolvePathSegment: ResolverFn<'path-segment'> = async (config, ctx) => {
 	const source = config.segmentSource ?? 'current-folder';
 	let value: string | undefined;
 
@@ -20,7 +20,7 @@ export const resolvePathSegment: ResolverFn = async (config, ctx) => {
 	return { matched: true, rawValue: value, resultType: 'raw' };
 };
 
-export const resolvePathRegex: ResolverFn = async (config, ctx) => {
+export const resolvePathRegex: ResolverFn<'path-regex'> = async (config, ctx) => {
 	const pattern = config.pattern;
 	if (!pattern) return { matched: false, resultType: 'raw' };
 
@@ -54,6 +54,6 @@ export const resolvePathRegex: ResolverFn = async (config, ctx) => {
 	return { matched: true, rawValue: value, resultType: 'raw' };
 };
 
-export const resolveStatic: ResolverFn = async (config) => {
+export const resolveStatic: ResolverFn<'static'> = async (config) => {
 	return { matched: true, rawValue: config.value, resultType: 'raw' };
 };

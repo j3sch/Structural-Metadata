@@ -1,11 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { RuleEngine } from '../src/core/RuleEngine';
-import { Formatter } from '../src/core/Formatter';
-import { DiffEngine } from '../src/core/DiffEngine';
+import { RuleEngine } from '../src/domain/core/RuleEngine';
+import { Formatter } from '../src/domain/core/Formatter';
+import { DiffEngine } from '../src/domain/core/DiffEngine';
 import { createDefaultRegistry } from '../src/resolvers';
 import { defaultSettings } from '../src/settings';
-import { ManagedStateStore } from '../src/state/ManagedStateStore';
+import { ManagedStateStore } from '../src/domain/ManagedStateStore';
 import { hashValue } from '../src/utils/hash';
 import { MockVault, mockLinkGenerator } from './mocks';
 import type { StructuralMetadataSettings, StructuralRule } from '../src/types';
@@ -174,5 +174,27 @@ describe('RuleEngine', () => {
 		assert.equal(shared?.action, 'set');
 		assert.equal(shared?.newValue, 'high-value');
 		assert.equal(changes.filter((c) => c.property === 'shared').length, 1);
+	});
+
+	it('uses the global link style when a rule does not override it', async () => {
+		const engine = makeEngine();
+		const settings = defaultSettings();
+		settings.folderNotePatterns = patterns;
+		settings.linkStyle = 'obsidian-preference';
+		settings.rules = [
+			{
+				...linkRule,
+				format: { type: 'wikilink' },
+			},
+		];
+		const changes = await engine.planForFile(
+			'01 Projects/Captzy/note.md',
+			{},
+			settings,
+			new ManagedStateStore(),
+			vault,
+			mockLinkGenerator,
+		);
+		assert.equal(changes[0]?.newValue, '[Captzy](01 Projects/Captzy/Captzy.md)');
 	});
 });

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ManagedStateStore } from '../src/state/ManagedStateStore';
+import { ManagedStateStore } from '../src/domain/ManagedStateStore';
 import { hashValue } from '../src/utils/hash';
 
 describe('ManagedStateStore', () => {

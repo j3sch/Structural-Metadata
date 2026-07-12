@@ -1,11 +1,9 @@
-import type {
-	FrontmatterSnapshot,
-	LinkGenerator,
-	PlannedChange,
-	ResolverContext,
-	StructuralMetadataSettings,
-	VaultAccess,
-} from '../types';
+import type { FrontmatterSnapshot, PlannedChange } from '../changes';
+import type { ManagedStateReader } from '../managed-state';
+import type { ResolverContext } from '../resolvers';
+import type { StructuralMetadataSettings } from '../rules';
+import type { LinkGenerator } from '../../ports/LinkGenerator';
+import type { VaultAccess } from '../../ports/VaultAccess';
 import { ScopeMatcher } from './ScopeMatcher';
 import { ResolverRegistry } from './ResolverRegistry';
 import { Formatter } from './Formatter';
@@ -14,8 +12,7 @@ import {
 	getBaseName,
 	getFileName,
 	getParentFolderPath,
-} from '../utils/path';
-import { ManagedStateStore } from '../state/ManagedStateStore';
+} from '../../utils/path';
 
 /**
  * The RuleEngine ties everything together: for a given file it determines
@@ -36,7 +33,7 @@ export class RuleEngine {
 		filePath: string,
 		currentFrontmatter: FrontmatterSnapshot,
 		settings: StructuralMetadataSettings,
-		managedState: ManagedStateStore,
+		managedState: ManagedStateReader,
 		vault: VaultAccess,
 		linkGenerator: LinkGenerator,
 	): Promise<PlannedChange[]> {
@@ -64,7 +61,7 @@ export class RuleEngine {
 				!ScopeMatcher.matches(
 					filePath,
 					rule.scope,
-					settings.defaults.excludePatterns,
+					settings.excludePatterns,
 				)
 			) {
 				continue;
@@ -72,10 +69,14 @@ export class RuleEngine {
 			claimed.add(rule.property);
 
 			const result = await this.registry.resolve(rule.resolver, ctx);
-			const formatted = this.formatter.format(result, rule.format, ctx);
+			const format =
+				rule.format.type === 'wikilink' && rule.format.style === undefined
+					? { ...rule.format, style: settings.linkStyle }
+					: rule.format;
+			const formatted = this.formatter.format(result, format, ctx);
 
-			const writePolicy = rule.writePolicy ?? settings.defaults.writePolicy;
-			const onNoMatch = rule.onNoMatch ?? settings.defaults.onNoMatch;
+			const writePolicy = rule.writePolicy ?? settings.writePolicy;
+			const onNoMatch = rule.onNoMatch ?? settings.onNoMatch;
 			const oldValue = currentFrontmatter[rule.property];
 			const managed = managedState.getEntry(filePath, rule.property);
 
@@ -106,7 +107,7 @@ export class RuleEngine {
 			const ownerRule = allRules.find((r) => r.id === entry.ruleId);
 			if (!ownerRule || !ownerRule.enabled) continue;
 
-			const onNoMatch = ownerRule.onNoMatch ?? settings.defaults.onNoMatch;
+			const onNoMatch = ownerRule.onNoMatch ?? settings.onNoMatch;
 			const oldValue = currentFrontmatter[property];
 			const change = this.diffEngine.compute({
 				filePath,
@@ -116,7 +117,7 @@ export class RuleEngine {
 				result: { matched: false, resultType: 'raw' },
 				formatted: undefined,
 				oldValue,
-				writePolicy: ownerRule.writePolicy ?? settings.defaults.writePolicy,
+				writePolicy: ownerRule.writePolicy ?? settings.writePolicy,
 				onNoMatch,
 				managed: entry,
 			});

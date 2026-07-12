@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { expandFolderNotePattern, findFolderNote } from '../src/core/FolderNoteFinder';
+import { expandFolderNotePattern, findFolderNote } from '../src/domain/core/FolderNoteFinder';
 import { MockVault } from './mocks';
 
 const patterns = [
